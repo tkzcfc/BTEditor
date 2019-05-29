@@ -1,0 +1,15 @@
+$#include "LoveExt.h"
+$#include "tolua_ext.h"
+
+class LoveExt
+{
+public:
+
+	static std::vector<std::string> openFileMultiSelect(const std::string& InFilter);
+
+	static std::string Utf8ToGbk(const std::string& strUtf8);
+	static std::string GbkToUtf8(const std::string& strGbk);
+
+	static std::string getClipboardString();
+	static void setClipboardString(const std::string& value);
+};

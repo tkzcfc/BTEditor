@@ -1,2 +1,1 @@
-"C:\Program Files (x86)\LOVE\love.exe" C:\leo\love\BTEditor\BTEditor --console
-exit
+"D:\btEditor\love-0.8.0-win-x86\love.exe" "D:\btEditor\BTEditor-master" --console

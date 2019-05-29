@@ -263,12 +263,22 @@ function changeScreenMode(ptable,picon)
   end
 end
 
+
 function readScreenMode(pfile,picon)
-  if love.filesystem.exists(pfile)==false then
+
+  -- for k, v in pairs(love.filesystem) do
+  --   print(tostring(k), tostring(v))
+  -- end
+  -- print("love.filesystem.getAppdataDirectory", love.filesystem.getAppdataDirectory())
+  -- print("love.filesystem.getWorkingDirectory", love.filesystem.getWorkingDirectory())
+  -- print("love.filesystem.getSaveDirectory", love.filesystem.getSaveDirectory())
+  -- print("love.filesystem.getUserDirectory", love.filesystem.getUserDirectory())
+
+  if myExists(pfile)==false then
     saveScreenMode(pfile)
   end
-  if love.filesystem.exists(pfile) then
-    local _config = love.filesystem.read(pfile)
+  if myExists(pfile) then
+    local _config = myRead(pfile)
     if (_config) then
       local screenconfig =  json.decode(_config)
       if screenconfig then
@@ -283,7 +293,7 @@ function saveScreenMode(pfile)
   _table = {}
   _table.width, _table.height, _table.fullscreen,_table.vsync, _table.fsaa = love.graphics.getMode( )
   if pfile then
-    return love.filesystem.write(pfile,json.encode(_table))
+    return myWrite(pfile,json.encode(_table))
   else
     return false
   end

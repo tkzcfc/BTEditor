@@ -581,6 +581,67 @@ function BTLua.Action:run(pbehavtree)
   if pbehavtree.endNode then pbehavtree.endNode(pbehavtree,self) end
   return _s
 end
+
+--------------- TRUE ----------------
+BTLua.True = inheritsFrom(BTLua.node)
+function BTLua.True:init(paction,...)
+  self.s = ""
+  self.n = -1
+  self.a = paction
+  if select("#",...)>0 then
+    self.a2 = {...}
+  end
+  self.r = nil
+end
+function BTLua.True:run(pbehavtree)
+  --debugprint("BTLua.True:run")
+  if pbehavtree.startNode then pbehavtree.startNode(pbehavtree,self) end
+  local _s
+  local _ticknum = pbehavtree.ticknum
+  local _object, _btree = pbehavtree.object, pbehavtree
+  -- if type(self.a) == "function" then
+  --   if self.a2 then
+  --     _s = self.a(pbehavtree.object,pbehavtree,unpack(self.a2))
+  --   else
+  --     _s = self.a(pbehavtree.object,pbehavtree)
+  --   end
+  -- end
+  _s = true
+  self.n,self.s = _ticknum, _s
+  if pbehavtree.endNode then pbehavtree.endNode(pbehavtree,self) end
+  return _s
+end
+
+--------------- FALSE ----------------
+BTLua.False = inheritsFrom(BTLua.node)
+function BTLua.False:init(paction,...)
+  self.s = ""
+  self.n = -1
+  self.a = paction
+  if select("#",...)>0 then
+    self.a2 = {...}
+  end
+  self.r = nil
+end
+function BTLua.False:run(pbehavtree)
+  --debugprint("BTLua.False:run")
+  if pbehavtree.startNode then pbehavtree.startNode(pbehavtree,self) end
+  local _s
+  local _ticknum = pbehavtree.ticknum
+  local _object, _btree = pbehavtree.object, pbehavtree
+  -- if type(self.a) == "function" then
+  --   if self.a2 then
+  --     _s = self.a(pbehavtree.object,pbehavtree,unpack(self.a2))
+  --   else
+  --     _s = self.a(pbehavtree.object,pbehavtree)
+  --   end
+  -- end
+  _s = false
+  self.n,self.s = _ticknum, _s
+  if pbehavtree.endNode then pbehavtree.endNode(pbehavtree,self) end
+  return _s
+end
+
 --------------- ActionResume ----------------
 BTLua.ActionResume = inheritsFrom(BTLua.node)
 function BTLua.ActionResume:init(paction,...)
@@ -868,6 +929,12 @@ function BTLua.BTree:parseNode(pnode,pattributes)
   end
   if _type =="SLEEP" then
     _node =  BTLua.Sleep(unpack(_func))
+  end
+  if _type =="TRUE" then
+    _node =  BTLua.True:new(unpack(_func))
+  end
+  if _type =="FALSE" then
+    _node =  BTLua.False:new(unpack(_func))
   end
   if _node==nil then
     error("BTLua : node type '"..pnode.type.."' unrecognized!")

@@ -1,0 +1,9 @@
+$lfile "doit.lua"
+$[
+local err,msg = pcall(doit)
+if not err then
+ local _,_,label,msg = strfind(msg,"(.-:.-:%s*)(.*)")
+ tolua_error(msg,label)
+ print(debug.traceback())
+end
+$]

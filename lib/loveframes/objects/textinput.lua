@@ -389,11 +389,19 @@ end
 	- desc: called when the player presses a key
 --]]---------------------------------------------------------
 function textinput:keypressed(key, unicode)
-
 	local visible = self.visible
 	
 	if not visible then
 		return
+	end
+
+	-- FC-Fix
+	if not self.editable then
+		return
+	end
+
+	if self.focus then
+		CutOffKeyEvent = true
 	end
 	
 	local time = love.timer.getTime()
@@ -408,11 +416,31 @@ function textinput:keypressed(key, unicode)
 		if key == "a" then
 			self.alltextselected = true
 		end
+		if key == "v" then
+			local str = LoveExt.getClipboardString()
+			for i = 1, #str do
+				local unicode = string.byte(str, i, i + 1)
+				self:appendText(unicode)
+			end
+			
+		end
+		if key == "x" then
+			if self.alltextselected then
+				LoveExt:setClipboardString(self:GetText())
+				self:SetText("")
+			end
+			
+		end
+		if key == "c" then
+			if self.alltextselected then
+				LoveExt:setClipboardString(self:GetText())
+			end
+			
+		end
 	end
 	
 	self:RunKey(key, unicode)
-	
-	
+
 end
 
 --[[---------------------------------------------------------
@@ -721,6 +749,123 @@ function textinput:RunKey(key, unicode)
 		end
 	end
 	
+end
+
+function textinput:appendText(unicode)
+
+	local visible = self.visible
+	local focus   = self.focus
+	
+	if not visible then
+		return
+	end
+	
+	if not self.focus then
+		return
+	end
+	
+	local lines           = self.lines
+	local line            = self.line
+	local numlines        = #lines
+	local curline         = lines[line]
+	local text            = curline
+	local ckey            = ""
+	local font            = self.font
+	local swidth          = self.width
+	local textoffsetx     = self.textoffsetx
+	local indicatornum    = self.indicatornum
+	local multiline       = self.multiline
+	local alltextselected = self.alltextselected
+	local editable        = self.editable
+	local ontextchanged   = self.OnTextChanged
+	local onenter         = self.OnEnter
+	
+	self.unicode = unicode
+	
+	if unicode > 31 and unicode < 127 then
+	
+		if not editable then
+			return
+		end
+	
+		if alltextselected then
+			self.alltextselected = false
+			self:Clear()
+			indicatornum = self.indicatornum
+			text = ""
+			lines = self.lines
+			line = self.line
+		end
+		
+		-- do not continue if the text limit has been reached or exceeded
+		if #text >= self.limit and self.limit ~= 0 then
+			return
+		end
+		
+		-- set the current key
+		ckey = string.char(unicode)
+			
+		-- check for unusable characters
+		if #self.usable > 0 then
+			local found = false
+			for k, v in ipairs(self.usable) do
+				if v == ckey then
+					found = true
+				end
+			end
+			if found == false then
+				return
+			end
+		end
+		
+		-- check for usable characters
+		if #self.unusable > 0 then
+			local found = false
+			for k, v in ipairs(self.unusable) do
+				if v == ckey then
+					found = true
+				end
+			end
+			if found == true then
+				return
+			end
+		end
+		
+		if indicatornum ~= 0 and indicatornum ~= #text then
+			text = self:AddIntoText(unicode, indicatornum)
+			lines[line] = text
+			self:MoveIndicator(1)
+		elseif indicatornum == #text then
+			text = text .. ckey
+			lines[line] = text
+			self:MoveIndicator(1)
+		elseif indicatornum == 0 then
+			text = self:AddIntoText(unicode, indicatornum)
+			lines[line] = text
+			self:MoveIndicator(1)
+		end
+		
+		-- call on text changed it if exists
+		if ontextchanged then
+			ontextchanged(self, ckey)
+		end
+		
+		lines     = self.lines
+		line      = self.line
+		curline   = lines[line]
+		text      = curline
+		
+		if not multiline then
+			local twidth    = font:getWidth(text)
+			local cwidth    = font:getWidth(ckey)
+			
+			-- swidth - 1 is for the "-" character
+			if (twidth + textoffsetx) >= (swidth - 1) then
+				self.offsetx = self.offsetx + cwidth
+			end
+		end
+	end
+
 end
 
 --[[---------------------------------------------------------

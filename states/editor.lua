@@ -37,7 +37,16 @@ EDITOR.mousePointer=nil
 EDITOR.notes = ""
 EDITOR.centerparentchildren = 0
 
+
+-- FC-Fix
+local filehistoryFilePath = BTEditorWorkDir .. "/BTEditor_filehistory.txt"
+
 function state:enter(pre, action, level,  ...)
+
+  self.key_map = {}
+  self.clipBoard = {}
+  self.clipBoard.isCopy = false
+  self.clipBoard.data = nil
 
   getScreenMode()
 
@@ -51,6 +60,7 @@ function state:enter(pre, action, level,  ...)
   loveframes.config["DEBUG"]=false
 
   EDITOR.gui = {}
+  EDITOR.gui_newDraw = {}
 
   local object
 
@@ -276,49 +286,86 @@ function state:enter(pre, action, level,  ...)
   object:SetMaxWidth(30)
   object:SetText("Type:")
   EDITOR.gui.lbl_nodetype = object
+  EDITOR.gui_newDraw.lbl_nodetype = object
+
   object = loveframes.Create("textinput")
   object:SetFont(fonts[",9"])
   object.OnTextChanged = state.applyChangesNode
   object:SetWidth(100)
   object:SetHeight(17)
   EDITOR.gui.txt_nodetype = object
+  EDITOR.gui_newDraw.txt_nodetype = object
+
   object = loveframes.Create("text")
   object:SetFont(fonts[",9"])
   object:SetMaxWidth(30)
   object:SetText("Name:")
   EDITOR.gui.lbl_nodename = object
+  EDITOR.gui_newDraw.lbl_nodename = object
+
   object = loveframes.Create("textinput")
   object:SetFont(fonts[",9"])
   object.OnTextChanged = state.applyChangesNode
   object:SetWidth(100)
   object:SetHeight(17)
   EDITOR.gui.txt_nodename = object
+  EDITOR.gui_newDraw.txt_nodename = object
+
   object = loveframes.Create("text")
   object:SetFont(fonts[",9"])
   object:SetMaxWidth(30)
   object:SetText("Sim:")
   EDITOR.gui.lbl_nodesim = object
+  EDITOR.gui_newDraw.lbl_nodesim = object
+
+  -- FC-Fix
+  -- 移除running选项
   object = loveframes.Create("multichoice")
   --object:SetFont(fonts[",9"])
   object:AddChoice("true")
   object:AddChoice("false")
-  object:AddChoice("running")
+  -- object:AddChoice("running")
   object:AddChoice("")
   object.OnChoiceSelected = state.applyChangesNode
   object:SetWidth(60)
   object:SetHeight(17)
   EDITOR.gui.txt_nodesim = object
+  EDITOR.gui_newDraw.txt_nodesim = object
+
+
   object = loveframes.Create("text")
   object:SetFont(fonts[",9"])
   object:SetMaxWidth(30)
   object:SetText("Func:")
   EDITOR.gui.lbl_nodefunc = object
+  EDITOR.gui_newDraw.lbl_nodefunc = object
+
   object = loveframes.Create("textinput")
   object:SetFont(fonts[",9"])
-  object:SetWidth(323)
+  object:SetWidth(100)
   object:SetHeight(17)
+  -- object:SetWidth(323)
+  -- object:SetHeight(17)
   object.OnTextChanged = state.applyChangesNode
   EDITOR.gui.txt_nodefunc = object
+  EDITOR.gui_newDraw.txt_nodefunc = object
+
+  -- FC-Fix
+  object = loveframes.Create("text")
+  object:SetFont(fonts[",9"])
+  object:SetMaxWidth(30)
+  object:SetText("Arg:")
+  EDITOR.gui.lbl_nodeArg = object
+  EDITOR.gui_newDraw.lbl_nodeArg = object
+
+  object = loveframes.Create("textinput")
+  object:SetFont(fonts[",9"])
+  object:SetWidth(100)
+  object:SetHeight(17)
+  object.OnTextChanged = state.applyChangesNode
+  EDITOR.gui.txt_nodeArg = object
+  EDITOR.gui_newDraw.txt_nodeArg = object
+
 
   object = loveframes.Create("button")
   object:SetText("<<")
@@ -326,6 +373,8 @@ function state:enter(pre, action, level,  ...)
   object:SetHeight(17)
   object.OnClick = state.clickEvent
   EDITOR.gui.btn_movebefore = object
+  EDITOR.gui_newDraw.btn_movebefore = object
+
   local tooltip = loveframes.Create("tooltip")
   tooltip:SetObject(object)
   tooltip:SetPadding(0)
@@ -338,6 +387,8 @@ function state:enter(pre, action, level,  ...)
   object:SetHeight(17)
   object.OnClick = state.clickEvent
   EDITOR.gui.btn_moveafter = object
+  EDITOR.gui_newDraw.btn_moveafter = object
+
   local tooltip = loveframes.Create("tooltip")
   tooltip:SetObject(object)
   tooltip:SetPadding(0)
@@ -362,6 +413,11 @@ function state:enter(pre, action, level,  ...)
   -- enable input
   EDITOR.inputenabled = true
 
+  for k, v in pairs(EDITOR.gui_newDraw) do
+    v.new_draw = v.draw
+    v.draw = function() end
+  end
+
 end
 
 function state:leave()
@@ -375,6 +431,7 @@ function state:update(dt)
         local cmd = EDITOR.commands_queue[i].cmd
         local arg = EDITOR.commands_queue[i].arg
         if cmd=="loadfile" then
+          self.clipBoard = {}
           local status, err = pcall(state.loadFile)
           if status == false then
             state.createDialog(state.funcnil,"alert",err)
@@ -446,6 +503,7 @@ function state:update(dt)
 
 end
 
+  -- FC-Fix
 function state:draw()
 
   local _x,_y = love.mouse.getPosition()
@@ -463,6 +521,13 @@ function state:draw()
   end
   EDITOR.camera:detach()
 
+  -- 修复层次显示问题
+  state:drawEditBox()
+
+  for k, v in pairs(EDITOR.gui_newDraw) do
+    v:new_draw()
+  end
+
   love.graphics.setColor(196,196,196,255)
   love.graphics.rectangle("fill",0,0,screen_width,EDITOR.toolbarheight)
   love.graphics.rectangle("fill",screen_width-EDITOR.palettewidth,EDITOR.toolbarheight,screen_width,screen_height-EDITOR.statusbarheight-EDITOR.toolbarheight)
@@ -474,11 +539,9 @@ function state:draw()
 
   state:drawPalette()
 
-  state:drawEditBox()
+  state:drawStatusBar()
 
   loveframes.draw()
-
-  state:drawStatusBar()
 
   if EDITOR.mousePointer then
     love.graphics.setColor(255,255,255,255)
@@ -493,9 +556,20 @@ function state:draw()
 end
 
 function state:keypressed(key, unicode)
-  if key=="lctrl" then
-    loveframes.config["DEBUG"]=not loveframes.config["DEBUG"]
+  CutOffKeyEvent = false
+
+  loveframes.keypressed(key, unicode)
+
+  if CutOffKeyEvent then
+    return
   end
+
+  -- FC-Fix
+  -- if key=="lctrl" then
+  --   loveframes.config["DEBUG"]=not loveframes.config["DEBUG"]
+  -- end
+
+  self.key_map[key] = true
 
   if EDITOR.inputenabled then
 
@@ -515,17 +589,22 @@ function state:keypressed(key, unicode)
 
     if key=="f6" then
       if EDITOR.nodeselected and EDITOR.palettenodeselected then
-        local _node = classes.node:new("",EDITOR.palettenodeselected.type,EDITOR.palettenodeselected.func,nil,nil,nil,nil,nil,EDITOR.nodeselected,nil)
-        local _num = 1
-        for k,v in pairs(EDITOR.nodekeys) do
-          if v.type == _node.type then
-            _num = _num + 1
+        if state:canAddNode(EDITOR.nodeselected, EDITOR.palettenodeselected) then
+          local _node = classes.node:new("",EDITOR.palettenodeselected.type,EDITOR.palettenodeselected.func,EDITOR.palettenodeselected.arg,nil,nil,nil,nil,nil,EDITOR.nodeselected,nil)
+          local _num = 1
+          for k,v in pairs(EDITOR.nodekeys) do
+            if v.type == _node.type then
+              _num = _num + 1
+            end
           end
+          _node.name = _node.type.."_".._num
+          _node:changeWidth()
+          state:addnode(_node)
+
+          state:onCreateNewNode(_node)
+
+          EDITOR.dolayout=true
         end
-        _node.name = _node.type.."_".._num
-        _node:changeWidth()
-        state:addnode(_node)
-        EDITOR.dolayout=true
       end
     end
 
@@ -548,8 +627,83 @@ function state:keypressed(key, unicode)
 
   end
 
-  loveframes.keypressed(key, unicode)
+  if self:getPressedKeyCount() == 1 and self.key_map["delete"] and EDITOR.nodeselected then
+    state:deleteNode(EDITOR.nodeselected,true)
+  end
 
+  if self.key_map["lctrl"] or self.key_map["rctrl"] then
+    -- ctrl + x
+    if self.key_map["x"] then
+      if EDITOR.nodeselected and EDITOR.nodeselected.type ~= "Start" then
+        self.clipBoard.data = {}
+        self.clipBoard.data.key = "TreeNode"
+        self.clipBoard.data.value = {}
+        self.clipBoard.data.value = state.serializeNode(self.clipBoard.data.value, EDITOR.nodeselected, 1, false) 
+        -- print_lua_value(self.clipBoard.data.value)
+        self.clipBoard.data.parent = EDITOR.nodeselected.parent
+        self.clipBoard.isCopy = false
+        state:deleteNode(EDITOR.nodeselected,true)
+      end
+    -- ctrl + c
+    elseif self.key_map["c"] then
+      if EDITOR.nodeselected and EDITOR.nodeselected.type ~= "Start" then
+        self.clipBoard.data = {}
+        self.clipBoard.data.key = "TreeNode"
+        self.clipBoard.data.value = {}
+        self.clipBoard.data.value = state.serializeNode(self.clipBoard.data.value, EDITOR.nodeselected, 1, false) 
+        self.clipBoard.isCopy = true
+      end
+    -- ctrl + v
+    elseif self.key_map["v"] then
+      if self:doClipBoard(EDITOR.nodeselected) then
+        if not self.clipBoard.isCopy then
+          self.clipBoard.data = nil
+        end
+      end
+    -- ctrl + z
+    -- elseif self.key_map["z"] then
+    --   if self.clipBoard.data then
+    --     if self.clipBoard.isCopy == false then
+    --       self:doClipBoard(self.clipBoard.data.parent)
+    --     end
+    --     self.clipBoard.data = nil
+    --   end
+    end
+  end
+end
+
+function state:doClipBoard(rootNode)
+  if self.clipBoard.data then
+    if rootNode and self.clipBoard.data.key == "TreeNode" then
+      local value = self.clipBoard.data.value
+      if self:canAddNode(rootNode, value) then
+        -- print_lua_value(value)
+        state.deserializeChild(rootNode,value[1],rootNode.level+1)
+        EDITOR.dolayout=true
+        -- print("doClipBoard true")
+        return true
+      end
+
+    end
+  end
+  -- print("doClipBoard false")
+  return false
+end
+
+function state:getPressedKeyCount()
+  local count = 0
+  for k,v in pairs(self.key_map) do
+    if v then
+      count = count + 1
+    end
+  end
+  return count
+end
+
+function state:keyreleased(key, unicode)
+  -- print("keyreleased", key, unicode)
+  self.key_map[key] = false
+  loveframes.keyreleased(key, unicode)
 end
 
 function state:mousepressed(x, y, button)
@@ -561,11 +715,15 @@ function state:mousepressed(x, y, button)
     if #loveframes.util.GetCollisions()<2 then
       if y > EDITOR.toolbarheight then
         if x < screen_width - EDITOR.palettewidth then
-          if (button=="l" or button=="r") and state:nodeHit(EDITOR.nodekeys,_x,_y) then
-            state:changeNodeSelected(state:nodeHit(EDITOR.nodekeys,_x,_y))
-            startx,starty = _x,_y
-            offsetx ,offsety = _x-EDITOR.nodeselected.x,_y-EDITOR.nodeselected.y
-            EDITOR.mouseaction = "movenode"
+          --FC-Fix
+          -- 修改为左键无法移动画布
+          if button == "l" then
+            if state:nodeHit(EDITOR.nodekeys,_x,_y) then
+              state:changeNodeSelected(state:nodeHit(EDITOR.nodekeys,_x,_y))
+              startx,starty = _x,_y
+              offsetx ,offsety = _x-EDITOR.nodeselected.x,_y-EDITOR.nodeselected.y
+              EDITOR.mouseaction = "movenode"
+            end
           else
             startx,starty = _x,_y
             EDITOR.mouseaction = "move"
@@ -577,6 +735,24 @@ function state:mousepressed(x, y, button)
               state:zoom(_x,_y,1.5)
             end
           end
+
+          -- if (button=="l" or button=="r") and state:nodeHit(EDITOR.nodekeys,_x,_y) then
+          --   state:changeNodeSelected(state:nodeHit(EDITOR.nodekeys,_x,_y))
+          --   startx,starty = _x,_y
+          --   offsetx ,offsety = _x-EDITOR.nodeselected.x,_y-EDITOR.nodeselected.y
+          --   EDITOR.mouseaction = "movenode"
+          -- else
+          --   startx,starty = _x,_y
+          --   EDITOR.mouseaction = "move"
+          --   state:changePointer(images.pointer_move)
+          --   if button=="wd" then
+          --     state:zoom(_x,_y,1/1.5)
+          --   end
+          --   if button=="wu" then
+          --     state:zoom(_x,_y,1.5)
+          --   end
+          -- end
+
         end
         if x >= screen_width-EDITOR.palettewidth then
           local _node = state:nodeHit(EDITOR.palette,x,y)
@@ -621,17 +797,24 @@ function state:mousereleased(x, y, button)
       if button == "l" then
         local _targetnode = state:nodeHit(EDITOR.nodekeys,endx,endy)
         if _targetnode  then
-          local _node = classes.node:new("",EDITOR.palettenodeselected.type,EDITOR.palettenodeselected.func,nil,nil,nil,nil,nil,_targetnode,nil)
-          local _num=1
-          for k,v in pairs(EDITOR.nodekeys) do
-            if v.type == _node.type then
-              _num = _num + 1
+
+          if state:canAddNode(_targetnode, EDITOR.palettenodeselected) then
+            local _node = classes.node:new("",EDITOR.palettenodeselected.type,EDITOR.palettenodeselected.func,EDITOR.palettenodeselected.arg,nil,nil,nil,nil,nil,_targetnode,nil)
+            local _num=1
+            for k,v in pairs(EDITOR.nodekeys) do
+              if v.type == _node.type then
+                _num = _num + 1
+              end
             end
+            _node.name = _node.type.."_".._num
+            _node:changeWidth()
+            state:addnode(_node)
+
+            state:onCreateNewNode(_node)
+
+            EDITOR.dolayout=true
           end
-          _node.name = _node.type.."_".._num
-          _node:changeWidth()
-          state:addnode(_node)
-          EDITOR.dolayout=true
+
         end
       end
       EDITOR.mouseaction = nil
@@ -643,13 +826,57 @@ function state:mousereleased(x, y, button)
 
 end
 
-function state:keyreleased(key)
-
-  if EDITOR.inputenabled then
+-- FC-Fix
+function state:canAddNode(curNode, addNodeInfo)
+  if curNode.type == "Sleep" or curNode.type == "True" or curNode.type == "False" or curNode.type == "Condition" or curNode.type == "Action" then
+    print(curNode.type .. " cannot contain child nodes")
+    return false
   end
 
-  loveframes.keyreleased(key)
+  if curNode.children then
+    if #curNode.children > 0 then
+      if curNode.type == "Start" or curNode.type == "Filter" or curNode.type == "Wait" then
+        print("Only one child allowed")
+        return false
+      end
+    end
+    return true
+  end
 
+  return true
+end
+
+function state:onCreateNewNode(node)
+  -- sim
+  if node.type == "Action" or node.type == "True" then
+    node.sim = "true"
+  elseif node.type == "False" then
+    node.sim = "false"
+  end
+
+  if node.type == "True" then
+    node.name = "return true"
+  elseif node.type == "False" then
+    node.name = "return false"
+  end
+end
+
+function state:isShowSimSelectItem(node)
+  if node.type == "Condition" or node.type == "Action" or node.type == "Filter" then
+    return true
+  end
+  return false
+end
+
+function state:isFuncEnableItem(node)
+  if node.type == "Condition" or node.type == "Action" or node.type == "Wait" or node.type == "Filter" or node.type == "True" or node.type == "False" then
+    return true
+  end
+  return false
+end
+
+function state:isArgEnableItem(node)
+  return self:isFuncEnableItem(node)
 end
 
 function state.clickEvent(object, mousex , mousey)
@@ -781,7 +1008,16 @@ function state.createDialog(onClose,ptype,...)
       object:SetText("Set SaveDirectory as path")
       object:SetPos(150,90)
       object:SetSize(150,20)
-      object.OnClick = function() EDITOR.gui.dialog.txt_filename:SetText( love.filesystem.getSaveDirectory().."/") EDITOR.gui.dialog.txt_filename:SetFocus(true) end
+      -- FC-Fix
+      object.OnClick = function()
+        local Paths = LoveExt.openFileMultiSelect("")
+        if #Paths > 0 then
+          EDITOR.gui.dialog.txt_filename:SetText( Paths[1] )
+          EDITOR.gui.dialog.txt_filename:SetFocus(true) 
+        end        
+      end
+      --object.OnClick = function() EDITOR.gui.dialog.txt_filename:SetText( love.filesystem.getWorkingDirectory().."/") EDITOR.gui.dialog.txt_filename:SetFocus(true) end
+      -- object.OnClick = function() EDITOR.gui.dialog.txt_filename:SetText( love.filesystem.getSaveDirectory().."/") EDITOR.gui.dialog.txt_filename:SetFocus(true) end
 
       local object = loveframes.Create("text",frame)
       object:SetText("Choose from history : ")
@@ -1412,21 +1648,24 @@ function state:deleteNode(pnode,external)
 end
 
 function state:loadPalette()
+  -- FC-Fix
   local _npal = 0
-  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","Selector","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
-  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","RandomSelector","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
-  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","Sequence","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
-  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","Condition","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
-  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","Action","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
-  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","ActionResume","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
-  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","RepeatUntil","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
-  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","Continue","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
-  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","Wait","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
-  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","WaitContinue","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
-  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","Filter","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
-  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","Decorator","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
-  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","DecoratorContinue","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
-  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","Sleep","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
+  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","Selector","","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
+  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","RandomSelector","","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
+  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","Sequence","","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
+  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","Condition","","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
+  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","Action","","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
+  -- _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","ActionResume","","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
+  -- _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","RepeatUntil","","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
+  -- _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","Continue","","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
+  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","Wait","","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
+  -- _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","WaitContinue","","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
+  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","Filter","","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
+  -- _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","Decorator","","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
+  -- _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","DecoratorContinue","","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
+  -- _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","Sleep","","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
+  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","True","","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
+  _npal = _npal +1 table.insert(EDITOR.palette, classes.node:new("","False","","","palette_".._npal,screen_width-EDITOR.palettewidth+5,EDITOR.toolbarheight+5+(EDITOR.palettenodeheight+5)*(_npal-1),nil,EDITOR.palettenodeheight,nil,nil))
 end
 
 function state:changePaletteNodeSelected(pnode)
@@ -1472,15 +1711,15 @@ function state.saveFile()
   else
     treeser = DataDumper(tree)
   end
-  if string.starts(EDITOR.filename,love.filesystem.getSaveDirectory().."/") then
-    local _filename = string.sub(EDITOR.filename,string.len(love.filesystem.getSaveDirectory().."/")+1)
-    if love.filesystem.write(_filename,treeser) then
-      return true
-    else
-      error("Error saving file "..EDITOR.filename)
-      return false
-    end
-  else
+  -- if string.starts(EDITOR.filename,love.filesystem.getSaveDirectory().."/") then
+  --   local _filename = string.sub(EDITOR.filename,string.len(love.filesystem.getSaveDirectory().."/")+1)
+  --   if love.filesystem.write(_filename,treeser) then
+  --     return true
+  --   else
+  --     error("Error saving file "..EDITOR.filename)
+  --     return false
+  --   end
+  -- else
     local file = io.open(EDITOR.filename, "w")
     if file == nil then
       error("Error saving file "..EDITOR.filename)
@@ -1488,10 +1727,47 @@ function state.saveFile()
     file:write(treeser)
     file:flush()
     file:close()
-  end
+
+    local lua_tab = format_lua_value(tree)
+    local extension = string.match(EDITOR.filename, "%.%a+$")
+    local exportFilename = string.gsub(EDITOR.filename, extension, "_export.lua")
+
+    lua_tab = "return "..lua_tab
+
+    lua_tab = loadstring(lua_tab)()
+    state.clearExportTab(lua_tab, false)
+    lua_tab = format_lua_value(lua_tab)
+    lua_tab = "return "..lua_tab
+    
+    local file = io.open(exportFilename, "w")
+    if file == nil then
+      error("Error saving file "..exportFilename)
+    end
+    file:write(lua_tab)
+    file:flush()
+    file:close()
+
+
+  -- end
 
   state.addFileToHistory(EDITOR.filename)
 
+end
+
+function state.clearExportTab(tab, ignore)
+  for k, v in pairs(tab) do
+    if k == "arg" or k == "children" or k == "func" or k == "name" or k == "type" or k == "nodes" or k == "title" then
+      if k == "children" or k == "nodes" then
+        for _ , child in pairs(v) do
+          state.clearExportTab(child, false)
+        end
+      end
+    else
+      if not ignore then
+        tab[k] = nil
+      end
+    end
+  end
 end
 
 function state.loadFile()
@@ -1553,7 +1829,8 @@ function state.deserializeChild(pnodeParent,pnode,plevel)
   if plevel > 1 then
     _nodeparent = pnodeParent
   end
-  local _node = classes.node:new(pnode.name,pnode.type,pnode.func,pnode.id,pnode.x,pnode.y,pnode.width,pnode.height,_nodeparent,pnode.indexchild)
+  local _node = classes.node:new(pnode.name,pnode.type,pnode.func,pnode.arg,pnode.id,pnode.x,pnode.y,pnode.width,pnode.height,_nodeparent,pnode.indexchild)
+
   for k,v in pairs(pnode) do
     if (type(v)=="boolean" or type(v)=="string" or type(v)=="number") and string.starts(k,"_")==false then
       _node[k]=v
@@ -1629,18 +1906,18 @@ function state.addFileToHistory(pfilename)
   end
   if _found==false then
     table.insert(EDITOR.fileHistory,pfilename)
-    love.filesystem.write("filehistory.txt",json.encode(EDITOR.fileHistory))
+    -- FC-Fix
+    myWrite(filehistoryFilePath,json.encode(EDITOR.fileHistory))
   end
 end
 
 function state.readFileHistory()
-  if love.filesystem.exists("filehistory.txt")==false then
-    EDITOR.fileHistory={}
+  -- FC-Fix
+  local _filehistory = myRead(filehistoryFilePath)
+  if _filehistory == "" then
+    EDITOR.fileHistory = {}
   else
-    local _filehistory = love.filesystem.read("filehistory.txt")
-    if (_filehistory) then
-      EDITOR.fileHistory =  json.decode(_filehistory)
-    end
+    EDITOR.fileHistory =  json.decode(_filehistory)
   end
 end
 
@@ -1663,6 +1940,8 @@ function state.applyChangesNode(object, text)
     EDITOR.nodeselected.name=EDITOR.gui.txt_nodename:GetText()
     EDITOR.nodeselected.func=EDITOR.gui.txt_nodefunc:GetText()
     EDITOR.nodeselected.sim=EDITOR.gui.txt_nodesim:GetChoice()
+    -- FC-Fix
+    EDITOR.nodeselected.arg = EDITOR.gui.txt_nodeArg:GetText()
     EDITOR.nodeselected:changeWidth()
     local _oldvalid = EDITOR.nodeselected.valid
     local _valid = 0
@@ -1685,14 +1964,18 @@ function state.positionEditNode()
     local _x,_y = _xo,_yo
     local _widtho,_heighto = EDITOR.camera:cameraCoords(EDITOR.nodeselected.x+EDITOR.nodeselected.width,EDITOR.nodeselected.y+EDITOR.nodeselected.height)
     local _width,_height = _widtho,_heighto
-    if _x+362 > screen_width-EDITOR.palettewidth then
-      _width = _width + (screen_width-EDITOR.palettewidth-_x-362)
-      _x = _x + (screen_width-EDITOR.palettewidth-_x-362)
-    end
-    if _x < 0 then
-      _width = _width + (-_x)
-      _x = _x + (-_x)
-    end
+
+    --FC-Fix
+    -- 修复悬浮菜单栏无法移动出画布外
+    -- if _x+362 > screen_width-EDITOR.palettewidth then
+    --   _width = _width + (screen_width-EDITOR.palettewidth-_x-362)
+    --   _x = _x + (screen_width-EDITOR.palettewidth-_x-362)
+    -- end
+    -- if _x < 0 then
+    --   _width = _width + (-_x)
+    --   _x = _x + (-_x)
+    -- end
+
     EDITOR.gui.lbl_nodetype:SetPos(_x+2,_height+7)
     EDITOR.gui.txt_nodetype:SetPos(_x+35,_height+2)
     EDITOR.gui.lbl_nodename:SetPos(_x+135,_height+7)
@@ -1701,6 +1984,24 @@ function state.positionEditNode()
     EDITOR.gui.txt_nodesim:SetPos(_x+299,_height+2)
     EDITOR.gui.lbl_nodefunc:SetPos(_x+2,_height+25)
     EDITOR.gui.txt_nodefunc:SetPos(_x+35,_height+20)
+
+    -- FC-Fix
+    EDITOR.gui.lbl_nodeArg:SetPos(_x+135,_height+20)
+    EDITOR.gui.txt_nodeArg:SetPos(_x+167,_height+20)
+
+
+    if not EDITOR.gui.lbl_nodesim:GetVisible() then
+      state.drawRectW = 275
+    else
+      state.drawRectW = 360
+    end
+
+    if not EDITOR.gui.lbl_nodefunc:GetVisible() and not EDITOR.gui.lbl_nodeArg:GetVisible() then
+      state.drawRectH = 22
+    else
+      state.drawRectH = 39
+    end
+
     EDITOR.box={x=_x,y=_y,width=_width,height=_height}
     EDITOR.gui.btn_movebefore:SetPos(_xo-19,_yo)
     EDITOR.gui.btn_moveafter:SetPos(_widtho+2,_yo)
@@ -1708,11 +2009,19 @@ function state.positionEditNode()
 end
 
 function state.drawEditBox()
+
+  if state.drawRectW == nil then
+    state.drawRectW = 360
+  end
+  if state.drawRectH == nil then
+    state.drawRectH = 39
+  end
+
   if EDITOR.box and EDITOR.nodeselected and EDITOR.nodeselected.type~="Start" then
     love.graphics.setColor(0,0,0,200)
-    love.graphics.rectangle("line",EDITOR.box.x,EDITOR.box.height,360,39)
+    love.graphics.rectangle("line",EDITOR.box.x,EDITOR.box.height,state.drawRectW,state.drawRectH)
     love.graphics.setColor(255,255,255,200)
-    love.graphics.rectangle("fill",EDITOR.box.x,EDITOR.box.height,360,39)
+    love.graphics.rectangle("fill",EDITOR.box.x,EDITOR.box.height,state.drawRectW,state.drawRectH)
   end
 end
 
@@ -1729,9 +2038,15 @@ end
 function state:zoom(xc,yc,zoom)
   _xs,_ys=EDITOR.camera:cameraCoords(xc,yc)
   local _newzoom = EDITOR.camera.zoom*zoom
-  if _newzoom >= 0.90 and _newzoom<=1.1 then
-    _newzoom = 1
+
+  -- if _newzoom >= 0.90 and _newzoom<=1.1 then
+  --   _newzoom = 1
+  -- end
+  -- FC-Fix
+  if _newzoom > 3 or _newzoom < 0.6 then
+    return
   end
+
   EDITOR.camera = Camera.new(xc,yc,_newzoom,EDITOR.camera.rot)
   _xc2,_yc2=EDITOR.camera:worldCoords(_xs,_ys)
   EDITOR.camera = Camera.new(xc-_xc2+xc,yc-_yc2+yc,_newzoom,EDITOR.camera.rot)
@@ -1749,7 +2064,7 @@ function state:newTree()
   EDITOR.nodekeys = {}
   EDITOR.nodesize = 0
   EDITOR.nodesNotValid=0
-  state:addnode(classes.node:new("","Start","","__start__",screen_middlex,32,nil,nil,nil,1))
+  state:addnode(classes.node:new("","Start","", "","__start__",screen_middlex,32,nil,nil,nil,1))
   EDITOR.dolayout=true
 
   EDITOR.camera = Camera.new(screen_middlex+EDITOR.palettewidth/2,screen_middley-EDITOR.toolbarheight-5, 1, 0)
@@ -1775,6 +2090,8 @@ function state:refreshNodeEditBox()
     EDITOR.gui.txt_nodetype:SetText(EDITOR.nodeselected.type)
     EDITOR.gui.txt_nodename:SetText(EDITOR.nodeselected.name)
     EDITOR.gui.txt_nodefunc:SetText(EDITOR.nodeselected.func)
+    -- FC-Fix
+    EDITOR.gui.txt_nodeArg:SetText(EDITOR.nodeselected.arg)
     if EDITOR.nodeselected.sim then
       EDITOR.gui.txt_nodesim:SetChoice(EDITOR.nodeselected.sim)
     else
@@ -1792,21 +2109,56 @@ function state:refreshNodeEditBox()
       EDITOR.gui.txt_nodefunc:SetVisible(false)
       EDITOR.gui.btn_movebefore:SetVisible(false)
       EDITOR.gui.btn_moveafter:SetVisible(false)
+      -- FC-Fix
+      EDITOR.gui.lbl_nodeArg:SetVisible(false)
+      EDITOR.gui.txt_nodeArg:SetVisible(false)
     else
       EDITOR.gui.lbl_nodetype:SetVisible(true)
       EDITOR.gui.txt_nodetype:SetVisible(true)
       EDITOR.gui.lbl_nodename:SetVisible(true)
       EDITOR.gui.txt_nodename:SetVisible(true)
-      if EDITOR.nodeselected.type=="Selector" or EDITOR.nodeselected.type=="RandomSelector" or EDITOR.nodeselected.type=="Sequence" then
-        EDITOR.gui.lbl_nodesim:SetVisible(false)
-        EDITOR.gui.txt_nodesim:SetVisible(false)
-      else
+
+      -- FC-Fix
+      if state:isShowSimSelectItem(EDITOR.nodeselected) then
         EDITOR.gui.lbl_nodesim:SetVisible(true)
         EDITOR.gui.txt_nodesim:SetVisible(true)
+      else
+        EDITOR.gui.lbl_nodesim:SetVisible(false)
+        EDITOR.gui.txt_nodesim:SetVisible(false)
       end
-      EDITOR.gui.lbl_nodefunc:SetVisible(true)
-      EDITOR.gui.txt_nodefunc:SetVisible(true)
-      EDITOR.gui.txt_nodefunc:SetFocus(true)
+      -- if EDITOR.nodeselected.type=="Selector" or EDITOR.nodeselected.type=="RandomSelector" or EDITOR.nodeselected.type=="Sequence" then
+      --   EDITOR.gui.lbl_nodesim:SetVisible(false)
+      --   EDITOR.gui.txt_nodesim:SetVisible(false)
+      -- else
+      --   EDITOR.gui.lbl_nodesim:SetVisible(true)
+      --   EDITOR.gui.txt_nodesim:SetVisible(true)
+      -- end
+
+
+      if state:isFuncEnableItem(EDITOR.nodeselected) then
+        EDITOR.gui.lbl_nodefunc:SetVisible(true)
+        EDITOR.gui.txt_nodefunc:SetVisible(true)
+        EDITOR.gui.txt_nodefunc:SetFocus(true)
+        EDITOR.gui.txt_nodefunc:SetEditable(true)
+      else
+        EDITOR.gui.lbl_nodefunc:SetVisible(false)
+        EDITOR.gui.txt_nodefunc:SetVisible(false)
+        EDITOR.gui.txt_nodefunc:SetFocus(false)
+        EDITOR.gui.txt_nodefunc:SetEditable(false)
+      end
+
+      -- FC-Fix
+      if state:isArgEnableItem(EDITOR.nodeselected) then
+        EDITOR.gui.lbl_nodeArg:SetVisible(true)
+        EDITOR.gui.txt_nodeArg:SetVisible(true)
+        EDITOR.gui.txt_nodeArg:SetEditable(true)
+      else
+        EDITOR.gui.lbl_nodeArg:SetVisible(false)
+        EDITOR.gui.txt_nodeArg:SetVisible(false)
+        EDITOR.gui.txt_nodeArg:SetFocus(false)
+        EDITOR.gui.txt_nodeArg:SetEditable(false)
+      end
+
       if EDITOR.nodeselected.parent and EDITOR.nodeselected.parent.children then
         if EDITOR.nodeselected.indexchild==1 then
           EDITOR.gui.btn_movebefore:SetVisible(false)

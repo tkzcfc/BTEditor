@@ -1,0 +1,1 @@
+tolua++ -o doit_tolua.cpp -H doit_tolua.h  doit.pkg

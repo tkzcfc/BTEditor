@@ -2,12 +2,13 @@
 
 local node = SECS_class:new()
 
-function node:init(pname,ptype,pfunc,pid,px,py,pwidth,pheight,pparent,pindexchild)
+function node:init(pname,ptype,pfunc,parg,pid,px,py,pwidth,pheight,pparent,pindexchild)
 
   --- common properties for node
   self.name = pname or ""
   self.type = ptype or ""
   self.func = pfunc or ""
+  self.arg  = parg  or ""
   self.id = pid
   if self.id==nil then
     self.id = generateId("node")
@@ -66,6 +67,7 @@ end
 
 function node:draw(pclipifoutsidecamera)
   local _draw = true
+  self.pclipifoutsidecamera = pclipifoutsidecamera
   if pclipifoutsidecamera then
     if self.x+self.width < EDITOR.cameraworld.x1 or self.x > EDITOR.cameraworld.x2 or self.y+self.height < EDITOR.cameraworld.y1 or self.y > EDITOR.cameraworld.y2 then
       _draw = false
@@ -123,7 +125,7 @@ function node:draw(pclipifoutsidecamera)
       love.graphics.setColor(255,255,255,255)
       love.graphics.draw(images.action,self.x+2,self.y+2)
     end
-    if self.type=="Decorator" or self.type=="RepeatUntil" or self.type=="Continue"  or self.type=="Wait" or self.type=="WaitContinue" or self.type == "Filter" or self.type == "Sleep"  or self.type == "DecoratorContinue" then
+    if self.type=="Decorator" or self.type=="RepeatUntil" or self.type=="Continue"  or self.type=="Wait" or self.type=="WaitContinue" or self.type == "Filter" or self.type == "Sleep"  or self.type == "DecoratorContinue" or self.type == "True" or self.type == "False" then
       if self.type == "Filter" then
         love.graphics.setColor(255,255,255,255)
         love.graphics.draw(images.condition,self.x+2,self.y+2)
@@ -177,6 +179,33 @@ end
 function node:validate()
   local _valid = true
   local _validtext = ""
+
+  if self.type == "Sleep" or self.type=="Wait" then
+    if self.arg == nil or self.arg == "" then
+      _valid = false
+      _validtext = "Please enter the '" .. self.type .."' time"
+    else
+      local num = tonumber(self.arg)
+      if num == nil then
+        _valid = false
+        _validtext = "'arg' only be numbers"
+      elseif num < 0 then
+        if num ~= -1 then
+          _valid = false
+          _validtext = "'arg' can only be greater than 0"
+        else
+          if self.func == "" then
+            _valid = false
+            _validtext = "sleep forever need a condition for waking up ('func')"
+          end
+        end
+      else
+        _valid = true
+        _validtext = ""
+      end
+    end
+  end
+
   if self.type == "Start" then
     if self.children==nil or #self.children==0 then
       _valid = false
@@ -214,7 +243,7 @@ function node:validate()
       _valid = false
       _validtext = _validtext..", Define a function for action node"
     end
-  elseif self.type=="Decorator" or self.type=="RepeatUntil" or self.type=="Continue"  or self.type=="Wait" or self.type=="WaitContinue" or self.type == "Filter"  or self.type == "Sleep"  or self.type == "DecoratorContinue" then
+  elseif self.type=="Decorator" or self.type=="RepeatUntil" or self.type=="Continue"  or self.type=="Wait" or self.type=="WaitContinue" or self.type == "Filter"  or self.type == "DecoratorContinue" then
     if self.children==nil or #self.children==0 then
       _valid = false
       _validtext = _validtext..", At least one child"
@@ -244,43 +273,73 @@ function node:drawShape(pmode)
   self:drawShape2(self.type,pmode,self.x,self.y,self.width,self.height)
 end
 
+function node:checkValidColor(pmode)
+  if self.pclipifoutsidecamera and pmode=="fill" then
+    if not self.valid then
+      love.graphics.setColor(255,0,0,255)
+    end
+  end
+end
+
 function node:drawShape2(ptype,pmode,px,py,pwidth,pheight)
   if ptype=="Start" then
     if pmode=="fill" then
       love.graphics.setColor(255,255,255,255)
     end
+    self:checkValidColor(pmode)
     love.graphics.circle(pmode,px+pwidth/2,py+pheight/2,pheight/2)
   elseif ptype=="Selector" or ptype=="RandomSelector" then
     if pmode=="fill" then
       love.graphics.setColor(255,150,70,255)
     end
+    self:checkValidColor(pmode)
     love.graphics.polygon(pmode,px,py,px+pwidth,py,px+pwidth,py+pheight,px,py+pheight)
   elseif ptype=="Sequence" then
     if pmode=="fill" then
       love.graphics.setColor(150,255,150,255)
     end
+    self:checkValidColor(pmode)
     love.graphics.polygon(pmode,px,py,px+pwidth,py,px+pwidth,py+pheight,px,py+pheight)
   elseif ptype=="Action" or ptype=="ActionResume" then
     if pmode=="fill" then
       love.graphics.setColor(150,150,255,255)
     end
+    self:checkValidColor(pmode)
     love.graphics.polygon(pmode,px,py,px+pwidth,py,px+pwidth,py+pheight,px,py+pheight)
   elseif ptype=="Decorator" or ptype=="RepeatUntil" or ptype=="Continue"  or ptype=="Wait" or ptype=="WaitContinue" or ptype == "Filter" or ptype == "Sleep"  or ptype == "DecoratorContinue" then
     if pmode=="fill" then
       love.graphics.setColor(255,255,100,255)
     end
+    self:checkValidColor(pmode)
     love.graphics.polygon(pmode,px,py,px+pwidth,py,px+pwidth,py+pheight,px,py+pheight)
   elseif ptype=="Condition" then
     if pmode=="fill" then
       love.graphics.setColor(150,255,150,255)
     end
+    self:checkValidColor(pmode)
     love.graphics.polygon(pmode,px+pwidth/2,py,px+pwidth,py+pheight/2,px+pwidth/2,py+pheight,px,py+pheight/2)
+  elseif ptype == "True" then
+    if pmode=="fill" then
+      love.graphics.setColor(20,210,20,250)
+    end
+    self:checkValidColor(pmode)
+    love.graphics.polygon(pmode,px,py,px+pwidth,py,px+pwidth,py+pheight,px,py+pheight)
+  elseif ptype == "False" then
+    if pmode=="fill" then
+      -- love.graphics.setColor(200,20,20,200)
+      love.graphics.setColor(191,67,233,250)
+    end
+    self:checkValidColor(pmode)
+    love.graphics.polygon(pmode,px,py,px+pwidth,py,px+pwidth,py+pheight,px,py+pheight)
   else
     if pmode=="fill" then
       love.graphics.setColor(255,0,255,255)
     end
+    self:checkValidColor(pmode)
     love.graphics.polygon(pmode,px,py,px+pwidth,py,px+pwidth,py+pheight,px,py+pheight)
   end
+
+  love.graphics.setColor(0,0,0,255)
 end
 
 return node

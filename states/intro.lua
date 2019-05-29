@@ -3,7 +3,7 @@ Gamestate.intro = Gamestate.new()
 local state = Gamestate.intro
 
 state.dt = 0
-state.autoexit = 5
+state.autoexit = 1
 
 --- state (LUADOC TODO add resume)
 -- state (LUADOC TODO add description)

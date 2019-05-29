@@ -22,6 +22,76 @@ end
 
 --profiler = require "profiler"
 
+-- FC-Fix
+function myWrite(fileName, content)
+    local f = assert(io.open(fileName,'w'))
+    f:write(content)
+    f:close()
+end
+
+function myRead(fileName)
+    local f = io.open(fileName,'r')
+    if f == nil then
+        return ""
+    end
+    local content = f:read('*all')
+    f:close()
+    return content
+end
+
+function myExists(fileName)
+    local f = io.open(fileName,'r')
+    if f == nil then
+        return false
+    end
+    f:close()
+    return true
+end
+
+
+function format_lua_value(inValue)
+    if type(inValue) ~= "table" then
+        return tostring(inValue)
+    end
+
+    local formatting = "{\n"
+
+    local function format_lua_table (lua_table, indent)
+        indent = indent or 0
+        
+        for k, v in pairs(lua_table) do
+            if type(k) == "string" then
+                k = string.format("%q", k)
+            end
+            local szSuffix = ""
+            if type(v) == "table" then
+                szSuffix = "{"
+            end
+            local szPrefix = string.rep("    ", indent)
+            formatting = formatting .. szPrefix.."["..k.."]".." = "..szSuffix
+            if type(v) == "table" then
+                formatting = formatting.."\n"
+                format_lua_table(v, indent + 1)
+                formatting = formatting .. szPrefix.."},\n"
+            else
+                local szValue = ""
+                if type(v) == "string" then
+                    szValue = string.format("%q", v)
+                else
+                    szValue = tostring(v)
+                end
+                formatting = formatting..szValue..",\n"
+            end
+        end
+    end
+    format_lua_table(inValue, 1)
+    return formatting.."}"
+end
+
+function print_lua_value(inValue)
+  print(format_lua_value(inValue))
+end
+
 function love.load()
 
   -- Set filesystem identity
@@ -29,7 +99,14 @@ function love.load()
 
   love.graphics.setCaption(game_title.." v."..game_version)
 
-  readScreenMode("configs.txt",images.icon)
+  -- FC-Fix
+  BTEditorWorkDir = love.filesystem.getWorkingDirectory()
+  local configFilePath = BTEditorWorkDir .. "/BTEditor_configs.txt"
+  readScreenMode(configFilePath,images.icon)
+
+
+  local loveExtFunc = package.loadlib("loveExt.dll","luaopen_loveExt")
+  loveExtFunc()
 
   -- Set Random Seed
   math.randomseed(os.time());
@@ -40,6 +117,5 @@ function love.load()
   Gamestate.registerEvents()
   require ("states/intro")
   Gamestate.switch(Gamestate.intro)
-
 end
 
