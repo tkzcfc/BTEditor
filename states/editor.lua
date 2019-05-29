@@ -2138,7 +2138,7 @@ function state:refreshNodeEditBox()
       if state:isFuncEnableItem(EDITOR.nodeselected) then
         EDITOR.gui.lbl_nodefunc:SetVisible(true)
         EDITOR.gui.txt_nodefunc:SetVisible(true)
-        EDITOR.gui.txt_nodefunc:SetFocus(true)
+        EDITOR.gui.txt_nodefunc:SetFocus(false)
         EDITOR.gui.txt_nodefunc:SetEditable(true)
       else
         EDITOR.gui.lbl_nodefunc:SetVisible(false)
