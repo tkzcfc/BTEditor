@@ -21,8 +21,9 @@ Use mouse wheel to zoom in/zoom out
 Load and save works in Lua Format or Json (file must have extension .json)  
 
 -------------------------------------------------------------------------
-![image](https://github.com/tkzcfc/BTEditor/tree/master/example/1.png)
-![image](https://github.com/tkzcfc/BTEditor/tree/master/example/2.png)
+
+![image](https://github.com/tkzcfc/BTEditor/blob/master/example/1.png)
+![image](https://github.com/tkzcfc/BTEditor/blob/master/example/2.png)
 
 [LOVE]: http://love2d.org
 [LOVEFRAMES]: http://github.com/NikolaiResokav/LoveFrames
