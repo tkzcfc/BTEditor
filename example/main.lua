@@ -20,8 +20,8 @@ function Player:hasMoney()
 	end
 end
 
-function Player:byCar(arg)
-	print("买车", "花费" .. arg)
+function Player:byCar(arg1, arg2)
+	print("买车", "花费" .. arg1, arg2)
 	return true
 end
 

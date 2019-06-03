@@ -14,7 +14,10 @@ return {
                                             ["type"] = "Action",
                                             ["name"] = "do buy car",
                                             ["func"] = "byCar",
-                                            ["arg"] = "200",
+                                            ["arg"] = {
+                                                [1] = 200,
+                                                [2] = "test",
+                                            },
                                         },
                                         [2] = {
                                             ["children"] = {
@@ -22,25 +25,34 @@ return {
                                                     ["type"] = "Action",
                                                     ["name"] = "watch movie",
                                                     ["func"] = "watchMovie",
-                                                    ["arg"] = "100",
+                                                    ["arg"] = {
+                                                        [1] = 100,
+                                                    },
                                                 },
                                             },
                                             ["type"] = "Wait",
                                             ["name"] = "wait 5 seconds",
                                             ["func"] = "",
-                                            ["arg"] = "5",
+                                            ["arg"] = {
+                                                [1] = 5,
+                                            },
                                         },
                                     },
                                     ["type"] = "RandomSelector",
                                     ["name"] = "do something",
                                     ["func"] = "",
-                                    ["arg"] = "",
+                                    ["arg"] = {
+                                        [1] = 3,
+                                        [2] = 2,
+                                    },
                                 },
                             },
                             ["type"] = "Filter",
                             ["name"] = "has money?",
                             ["func"] = "hasMoney",
-                            ["arg"] = "",
+                            ["arg"] = {
+                                [1] = "",
+                            },
                         },
                         [2] = {
                             ["children"] = {
@@ -50,7 +62,9 @@ return {
                                             ["type"] = "Action",
                                             ["name"] = "go home",
                                             ["func"] = "goHome",
-                                            ["arg"] = "",
+                                            ["arg"] = {
+                                                [1] = "",
+                                            },
                                         },
                                         [2] = {
                                             ["children"] = {
@@ -58,42 +72,57 @@ return {
                                                     ["type"] = "Action",
                                                     ["name"] = "do work",
                                                     ["func"] = "doWork",
-                                                    ["arg"] = "",
+                                                    ["arg"] = {
+                                                        [1] = "",
+                                                    },
                                                 },
                                                 [2] = {
                                                     ["type"] = "Action",
                                                     ["name"] = "go home",
                                                     ["func"] = "goHome",
-                                                    ["arg"] = "",
+                                                    ["arg"] = {
+                                                        [1] = "",
+                                                    },
                                                 },
                                             },
                                             ["type"] = "Sequence",
                                             ["name"] = "Sequence_2",
                                             ["func"] = "",
-                                            ["arg"] = "",
+                                            ["arg"] = {
+                                                [1] = "",
+                                            },
                                         },
                                     },
                                     ["type"] = "RandomSelector",
                                     ["name"] = "do something",
                                     ["func"] = "",
-                                    ["arg"] = "",
+                                    ["arg"] = {
+                                        [1] = 1,
+                                        [2] = 1,
+                                    },
                                 },
                             },
                             ["type"] = "Sequence",
                             ["name"] = "no money...",
                             ["func"] = "",
-                            ["arg"] = "",
+                            ["arg"] = {
+                                [1] = "",
+                            },
                         },
                     },
                     ["type"] = "Selector",
                     ["name"] = "Selector_1",
                     ["func"] = "",
-                    ["arg"] = "",
+                    ["arg"] = {
+                        [1] = "",
+                    },
                 },
             },
             ["type"] = "Start",
             ["name"] = "",
-            ["arg"] = "",
+            ["arg"] = {
+                [1] = "",
+            },
         },
     },
 }

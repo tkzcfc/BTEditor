@@ -876,6 +876,9 @@ function state:isFuncEnableItem(node)
 end
 
 function state:isArgEnableItem(node)
+  if node.type == "RandomSelector" then
+    return true
+  end
   return self:isFuncEnableItem(node)
 end
 
@@ -1755,7 +1758,50 @@ function state.saveFile()
 end
 
 function state.clearExportTab(tab, ignore)
+
+  local function splitStr(arg, separator)
+    local args = {}
+    local beginPos = 1
+  
+    repeat
+      local a, b = string.find(arg, separator, beginPos)
+      if a == nil then
+        args[#args + 1] = string.sub(arg, beginPos, #arg)
+        break
+      end
+      args[#args + 1] = string.sub(arg, beginPos, a - 1)
+      beginPos = b + 1
+    until(false)
+  
+      return args
+  end
+
   for k, v in pairs(tab) do
+
+    if k == "arg" then
+      local args = splitStr(v, ",")
+
+      for arg_k, arg_v in pairs(args) do
+        arg_v = string.gsub(arg_v, " ", "")
+        if arg_v ~= "" then
+
+          if arg_v == "true" then
+            args[arg_k] = true
+          elseif arg_v == "false" then
+            args[arg_k] = false
+          else
+            local arg_n = tonumber(arg_v)
+            if arg_n ~= nil then
+              args[arg_k] = arg_n
+            end
+          end
+
+        end
+      end
+
+      tab[k] = args
+    end
+
     if k == "arg" or k == "children" or k == "func" or k == "name" or k == "type" or k == "nodes" or k == "title" then
       if k == "children" or k == "nodes" then
         for _ , child in pairs(v) do
@@ -2157,6 +2203,20 @@ function state:refreshNodeEditBox()
         EDITOR.gui.txt_nodeArg:SetVisible(false)
         EDITOR.gui.txt_nodeArg:SetFocus(false)
         EDITOR.gui.txt_nodeArg:SetEditable(false)
+      end
+
+      if EDITOR.nodeselected.type == "RandomSelector" then
+        EDITOR.gui.lbl_nodeArg:SetText("Weight:")
+      elseif EDITOR.nodeselected.type == "Wait" then
+        EDITOR.gui.lbl_nodeArg:SetText("Time:")
+      else
+        EDITOR.gui.lbl_nodeArg:SetText("Arg:")
+      end
+
+      if EDITOR.nodeselected.type == "Condition" then
+        EDITOR.gui.lbl_nodename:SetText("Condition:")
+      else
+        EDITOR.gui.lbl_nodename:SetText("Name:")
       end
 
       if EDITOR.nodeselected.parent and EDITOR.nodeselected.parent.children then

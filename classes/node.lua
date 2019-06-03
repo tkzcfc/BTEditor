@@ -2,6 +2,26 @@
 
 local node = SECS_class:new()
 
+
+local function splitStr(arg, separator)
+    local args = {}
+    local beginPos = 1
+  
+    repeat
+      local a, b = string.find(arg, separator, beginPos)
+      if a == nil then
+        args[#args + 1] = string.sub(arg, beginPos, #arg)
+        break
+      end
+      args[#args + 1] = string.sub(arg, beginPos, a - 1)
+      beginPos = b + 1
+    until(false)
+  
+      return args
+  end
+
+
+
 function node:init(pname,ptype,pfunc,parg,pid,px,py,pwidth,pheight,pparent,pindexchild)
 
   --- common properties for node
@@ -185,24 +205,56 @@ function node:validate()
       _valid = false
       _validtext = "Please enter the '" .. self.type .."' time"
     else
-      local num = tonumber(self.arg)
-      if num == nil then
-        _valid = false
-        _validtext = "'arg' only be numbers"
-      elseif num < 0 then
-        if num ~= -1 then
-          _valid = false
-          _validtext = "'arg' can only be greater than 0"
-        else
-          if self.func == "" then
-            _valid = false
-            _validtext = "sleep forever need a condition for waking up ('func')"
+
+      local args = splitStr(self.arg, ",")
+
+      for arg_k, arg_v in pairs(args) do
+        arg_v = string.gsub(arg_v, " ", "")
+        if arg_v ~= "" then
+          local arg_n = tonumber(arg_v)
+          if arg_n ~= nil then
+            args[arg_k] = arg_n
           end
         end
-      else
-        _valid = true
-        _validtext = ""
       end
+
+      if #args > 2 then
+        _valid = false
+        _validtext = "Maximum 2 parameters"
+      else
+        local num = args[1]
+        if type(num) == "number" then
+
+          if num < 0 then
+            if num ~= -1 then
+              _valid = false
+              _validtext = "'arg[1]' can only be greater than 0"
+            else
+              if self.func == "" then
+                _valid = false
+                _validtext = "sleep forever need a condition for waking up ('func')"
+              end
+            end
+          else
+            if #args > 1 then
+              if type(args[2]) == "number" then
+                if args[2] < 0 then
+                  _valid = false
+                  _validtext = "'arg[2]' can only be greater than 0"
+                end
+              else
+                _valid = false
+                _validtext = "'arg[2]' only be numbers"
+              end
+            end
+          end
+
+        else
+          _valid = false
+          _validtext = "'arg' only be numbers"
+        end
+      end
+
     end
   end
 
@@ -219,6 +271,53 @@ function node:validate()
     if self.children==nil or #self.children==0 then
       _valid = false
       _validtext = _validtext..", At least one child node"
+    elseif self.type == "RandomSelector" then
+      if self.arg == nil or self.arg == "" then
+        if #self.children > 1 then
+          _valid = false
+          _validtext = _validtext..", Setting random weight"
+        end
+      else
+        local args = splitStr(self.arg, ",")
+
+        for arg_k, arg_v in pairs(args) do
+          arg_v = string.gsub(arg_v, " ", "")
+          if arg_v ~= "" then
+            local arg_n = tonumber(arg_v)
+            if arg_n ~= nil then
+              args[arg_k] = arg_n
+            end
+          end
+        end
+
+        local hasError = false
+        for arg_k, arg_v in pairs(args) do
+          if type(arg_v) ~= "number" then
+            hasError = true
+            _valid = false
+            _validtext = _validtext..", The weight value must be a number"
+            break
+          end
+        end
+
+        if hasError == false then
+          if #args ~= #self.children then
+            if #self.children == 1 then
+              if #args > 0 then
+                hasError = true
+                _valid = false
+                _validtext = _validtext..", Illegal weight value"
+              end
+            else
+              hasError = true
+              _valid = false
+              _validtext = _validtext..", Illegal weight value"
+            end
+          end
+        end
+
+      end
+
     end
   elseif self.type == "Sequence" then
     if self.children==nil or #self.children==0 then
