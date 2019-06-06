@@ -1779,27 +1779,31 @@ function state.clearExportTab(tab, ignore)
   for k, v in pairs(tab) do
 
     if k == "arg" then
-      local args = splitStr(v, ",")
+      if v == "" then
+        tab[k] = {}
+      else
+        local args = splitStr(v, ",")
 
-      for arg_k, arg_v in pairs(args) do
-        arg_v = string.gsub(arg_v, " ", "")
-        if arg_v ~= "" then
-
-          if arg_v == "true" then
-            args[arg_k] = true
-          elseif arg_v == "false" then
-            args[arg_k] = false
-          else
-            local arg_n = tonumber(arg_v)
-            if arg_n ~= nil then
-              args[arg_k] = arg_n
+        for arg_k, arg_v in pairs(args) do
+          arg_v = string.gsub(arg_v, " ", "")
+          if arg_v ~= "" then
+  
+            if arg_v == "true" then
+              args[arg_k] = true
+            elseif arg_v == "false" then
+              args[arg_k] = false
+            else
+              local arg_n = tonumber(arg_v)
+              if arg_n ~= nil then
+                args[arg_k] = arg_n
+              end
             end
+  
           end
-
         end
+  
+        tab[k] = args
       end
-
-      tab[k] = args
     end
 
     if k == "arg" or k == "children" or k == "func" or k == "name" or k == "type" or k == "nodes" or k == "title" then
